@@ -9,6 +9,19 @@ describe('設定検証', () => {
     expect(parseConfigJson(JSON.stringify({ ...DEFAULT_CONFIG, seed: 'abc' })).config).toBeUndefined()
   })
 
+  it('schemaVersion 1の設定を座席形式付きの現行形式へ移行する', () => {
+    const legacy = structuredClone(DEFAULT_CONFIG) as unknown as Record<string, unknown>
+    legacy.schemaVersion = 1
+    legacy.tables = [
+      { id: 'counter', name: 'カウンター', capacity: 1, count: 4 },
+      { id: 'table', name: '2人卓', capacity: 2, count: 2 },
+    ]
+    const parsed = parseConfigJson(JSON.stringify(legacy)).config
+    expect(parsed?.schemaVersion).toBe(2)
+    expect(parsed?.tables[0]?.kind).toBe('counter-single')
+    expect(parsed?.tables[1]?.kind).toBe('table')
+  })
+
   it('正しい設定を受け入れる', () => {
     expect(validateConfig(DEFAULT_CONFIG)).toEqual({ valid: true, errors: [] })
     expect(parseConfigJson(JSON.stringify(DEFAULT_CONFIG)).config).toEqual(DEFAULT_CONFIG)
@@ -48,5 +61,19 @@ describe('設定検証', () => {
     expect(validateConfig(duplicateIds).errors).toEqual(
       expect.arrayContaining(['テーブル種別のIDが重複しています。', '来店時間帯のIDが重複しています。']),
     )
+  })
+
+  it('不正な座席形式と定員1以外の1人専用カウンターを拒否する', () => {
+    const invalidKind = structuredClone(DEFAULT_CONFIG) as unknown as Record<string, unknown>
+    invalidKind.tables = [
+      { id: 'invalid', name: '不正', kind: 'unknown', capacity: 2, count: 1 },
+    ]
+    expect(validateConfig(invalidKind).errors.some((error) => error.includes('座席形式'))).toBe(true)
+
+    const invalidSingle = structuredClone(DEFAULT_CONFIG)
+    invalidSingle.tables = [
+      { id: 'single', name: '1人専用', kind: 'counter-single', capacity: 2, count: 4 },
+    ]
+    expect(validateConfig(invalidSingle).errors.some((error) => error.includes('定員を1'))).toBe(true)
   })
 })

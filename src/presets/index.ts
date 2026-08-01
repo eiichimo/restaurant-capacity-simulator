@@ -26,9 +26,9 @@ export const PRESETS: Record<string, SimulatorConfig> = {
   '小規模ランチ店': {
     ...common,
     tables: [
-      { id: 'counter', name: 'カウンター', capacity: 1, count: 4 },
-      { id: 'table-2', name: '2人卓', capacity: 2, count: 2 },
-      { id: 'table-4', name: '4人卓', capacity: 4, count: 2 },
+      { id: 'counter', name: 'カウンター', kind: 'counter-contiguous', capacity: 4, count: 1 },
+      { id: 'table-2', name: '2人卓', kind: 'table', capacity: 2, count: 2 },
+      { id: 'table-4', name: '4人卓', kind: 'table', capacity: 4, count: 2 },
     ],
     arrivalPeriods: [
       { id: 'early', startTime: '11:00', endTime: '12:00', groupsPerHour: 7 },
@@ -40,8 +40,8 @@ export const PRESETS: Record<string, SimulatorConfig> = {
   'カウンター中心店': {
     ...common,
     tables: [
-      { id: 'counter-main', name: 'カウンター', capacity: 1, count: 10 },
-      { id: 'table-2', name: '2人卓', capacity: 2, count: 2 },
+      { id: 'counter-main', name: 'カウンター', kind: 'counter-contiguous', capacity: 10, count: 1 },
+      { id: 'table-2', name: '2人卓', kind: 'table', capacity: 2, count: 2 },
     ],
     arrivalPeriods: [
       { id: 'early', startTime: '11:00', endTime: '12:00', groupsPerHour: 9 },
@@ -53,8 +53,8 @@ export const PRESETS: Record<string, SimulatorConfig> = {
   '4人卓中心店': {
     ...common,
     tables: [
-      { id: 'table-2', name: '2人卓', capacity: 2, count: 2 },
-      { id: 'table-4-main', name: '4人卓', capacity: 4, count: 5 },
+      { id: 'table-2', name: '2人卓', kind: 'table', capacity: 2, count: 2 },
+      { id: 'table-4-main', name: '4人卓', kind: 'table', capacity: 4, count: 5 },
     ],
     arrivalPeriods: [
       { id: 'early', startTime: '11:00', endTime: '12:00', groupsPerHour: 6 },

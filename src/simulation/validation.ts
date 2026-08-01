@@ -2,6 +2,7 @@ import { timeToDayMinutes } from './time'
 import { SCHEMA_VERSION, type SimulatorConfig, type TrialCount } from './types'
 
 const TRIAL_COUNTS: TrialCount[] = [100, 1000, 5000, 10000]
+const TABLE_KINDS = ['table', 'counter-single', 'counter-contiguous'] as const
 
 export interface ValidationResult {
   valid: boolean
@@ -64,8 +65,14 @@ export function validateConfig(value: unknown): ValidationResult {
       }
       if (typeof table.id !== 'string' || !table.id) errors.push(`テーブル種別${index + 1}のIDが不正です。`)
       if (typeof table.name !== 'string' || !table.name.trim()) errors.push(`テーブル種別${index + 1}の名称を入力してください。`)
-      if (!positiveInteger(table.capacity)) errors.push(`テーブル種別${index + 1}の定員は1以上の整数にしてください。`)
-      if (!positiveInteger(table.count)) errors.push(`テーブル種別${index + 1}の卓数は1以上の整数にしてください。`)
+      if (!TABLE_KINDS.includes(table.kind as (typeof TABLE_KINDS)[number])) {
+        errors.push(`テーブル種別${index + 1}の座席形式が不正です。`)
+      }
+      if (!positiveInteger(table.capacity)) errors.push(`テーブル種別${index + 1}の定員・列席数は1以上の整数にしてください。`)
+      if (!positiveInteger(table.count)) errors.push(`テーブル種別${index + 1}の卓数・席数・列数は1以上の整数にしてください。`)
+      if (table.kind === 'counter-single' && table.capacity !== 1) {
+        errors.push(`テーブル種別${index + 1}の1人専用カウンターは定員を1にしてください。`)
+      }
     })
     const tableIds = value.tables.flatMap((table) =>
       isRecord(table) && typeof table.id === 'string' ? [table.id] : [],
@@ -156,7 +163,27 @@ export function parseConfigJson(json: string): { config?: SimulatorConfig; error
   } catch {
     return { errors: ['JSONの形式が正しくありません。'] }
   }
+  parsed = migrateConfig(parsed)
   const validation = validateConfig(parsed)
   if (!validation.valid) return { errors: validation.errors }
   return { config: parsed as SimulatorConfig, errors: [] }
+}
+
+function migrateConfig(value: unknown): unknown {
+  if (!isRecord(value) || value.schemaVersion !== 1 || !Array.isArray(value.tables)) return value
+  return {
+    ...value,
+    schemaVersion: SCHEMA_VERSION,
+    tables: value.tables.map((table) => {
+      if (!isRecord(table)) return table
+      const isSingleCounter =
+        table.capacity === 1 &&
+        typeof table.name === 'string' &&
+        /カウンター|counter/i.test(table.name)
+      return {
+        ...table,
+        kind: isSingleCounter ? 'counter-single' : 'table',
+      }
+    }),
+  }
 }

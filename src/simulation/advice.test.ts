@@ -105,7 +105,7 @@ describe('ChatGPT解析用テキスト', () => {
     )
 
     expect(prompt).toContain('# 飲食店シミュレーション結果の分析依頼')
-    expect(prompt).toContain('"schemaVersion": 1')
+    expect(prompt).toContain('"schemaVersion": 2')
     expect(prompt).toContain('"averageRevenueYen": 50000')
     expect(prompt).toContain('"localHypotheses"')
     expect(prompt).toContain('人件費、食材原価、設備費')

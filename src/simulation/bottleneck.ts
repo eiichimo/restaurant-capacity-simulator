@@ -33,7 +33,7 @@ export function detectBottlenecks(summary: SummaryStatistics): BottleneckFinding
   if (tableHigh) {
     findings.push({
       kind: '客席制約',
-      message: '満席離脱または卓稼働率が高く、客席能力が主要な制約になっている可能性があります。',
+      message: '満席離脱または客席リソース稼働率が高く、客席能力が主要な制約になっている可能性があります。',
     })
   }
   if (

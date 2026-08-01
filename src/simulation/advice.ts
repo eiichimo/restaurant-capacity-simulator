@@ -58,7 +58,7 @@ export function generateOperationalAdvice(
     advice.push({
       id: 'oversize',
       title: '大人数グループの受け入れ方針を比較する',
-      rationale: `最大卓定員${maximumCapacity}人を超える離脱が1日平均${result.summary.averageRejectedOversizeGroups.toFixed(1)}組あります。`,
+      rationale: `最大の卓またはカウンター列で収容できる${maximumCapacity}人を超える離脱が1日平均${result.summary.averageRejectedOversizeGroups.toFixed(1)}組あります。`,
       experiments: [
         '5〜6人を収容できる卓を仮に1卓追加した条件を試す',
         '大人数を受け入れない運営方針の場合は、現状を基準ケースとして維持する',
@@ -72,7 +72,7 @@ export function generateOperationalAdvice(
     advice.push({
       id: 'seating-mix',
       title: '総席数ではなく卓構成を組み替えて比較する',
-      rationale: `卓稼働率${percent(result.summary.averageTableUtilization)}に対して実席稼働率は${percent(result.summary.averageSeatUtilization)}です。大きな卓の空席ロスが示唆されます。`,
+      rationale: `客席リソース稼働率${percent(result.summary.averageTableUtilization)}に対して実席稼働率は${percent(result.summary.averageSeatUtilization)}です。大きな卓の空席ロスが示唆されます。`,
       experiments: [
         `発生比率が最も高い${partySize}人グループを収容できる小さな卓を増やす`,
         '総席数をなるべく変えず、大卓1卓を小卓へ置き換えた条件を比較する',
@@ -83,7 +83,7 @@ export function generateOperationalAdvice(
     advice.push({
       id: 'tables',
       title: '客席数と卓回転の改善を分けて比較する',
-      rationale: `卓稼働率は${percent(result.summary.averageTableUtilization)}、満席離脱は1日平均${result.summary.averageRejectedFullGroups.toFixed(1)}組です。`,
+      rationale: `客席リソース稼働率は${percent(result.summary.averageTableUtilization)}、満席離脱は1日平均${result.summary.averageRejectedFullGroups.toFixed(1)}組です。`,
       experiments: [
         '主要なテーブル種別を1卓だけ追加した条件を試す',
         `片付け時間を${config.business.cleanupMinutes}分から${Math.max(0, config.business.cleanupMinutes - 2)}分へ短縮した条件を別に試す`,
@@ -112,7 +112,7 @@ export function generateOperationalAdvice(
     advice.push({
       id: 'demand',
       title: '設備投資の前に需要感度を確認する',
-      rationale: `卓稼働率${percent(result.summary.averageTableUtilization)}、厨房稼働率${percent(result.summary.averageKitchenUtilization)}で、設備能力に余裕がある可能性があります。`,
+      rationale: `客席リソース稼働率${percent(result.summary.averageTableUtilization)}、厨房稼働率${percent(result.summary.averageKitchenUtilization)}で、設備能力に余裕がある可能性があります。`,
       experiments: [
         '各時間帯の来店組数を10%増やした条件を試す',
         'ピーク時間帯だけ来店組数を20%増やした条件を試す',

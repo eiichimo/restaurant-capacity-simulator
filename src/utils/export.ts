@@ -35,7 +35,7 @@ const CSV_COLUMNS: Array<[string, keyof DayResult]> = [
   ['最大提供待ち分', 'maxServiceWait'],
   ['平均滞在分', 'averageStay'],
   ['最大滞在分', 'maxStay'],
-  ['卓稼働率', 'tableUtilization'],
+  ['客席リソース稼働率', 'tableUtilization'],
   ['実席稼働率', 'seatUtilization'],
   ['厨房稼働率', 'kitchenUtilization'],
   ['営業終了後処理分', 'overtimeMinutes'],

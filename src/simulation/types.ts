@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 1 as const
+export const SCHEMA_VERSION = 2 as const
 
 export type TrialCount = 100 | 1000 | 5000 | 10000
 
@@ -13,6 +13,7 @@ export interface BusinessSettings {
 export interface TableType {
   id: string
   name: string
+  kind: 'table' | 'counter-single' | 'counter-contiguous'
   capacity: number
   count: number
 }
@@ -78,7 +79,9 @@ export interface GroupTrace {
   arrivalTime: number
   partySize: number
   outcome: 'accepted' | 'full' | 'oversize' | 'lastOrder'
+  seatingKind?: TableType['kind']
   tableCapacity?: number
+  allocatedSeatCount?: number
   orderTime?: number
   serviceTimes?: number[]
   mealStartTimes?: number[]

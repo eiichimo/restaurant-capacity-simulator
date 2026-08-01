@@ -10,15 +10,34 @@ import type {
   TestArrival,
 } from './types'
 
-interface TableResource {
+interface NormalTableResource {
+  kind: 'table'
   capacity: number
   availableAt: number
+}
+
+interface CounterRowResource {
+  kind: 'counter-single' | 'counter-contiguous'
+  capacity: number
+  seatAvailableAt: number[]
+}
+
+type SeatingResource = NormalTableResource | CounterRowResource
+
+interface SeatingAllocation {
+  resource: SeatingResource
+  resourceIndex: number
+  seatIndexes: number[]
+  allocatedSeatCount: number
+  effectiveCapacity: number
+  waste: number
 }
 
 interface Interval {
   start: number
   end: number
   people?: number
+  resourceUnits?: number
 }
 
 interface SimulateOptions {
@@ -73,10 +92,121 @@ export function chooseSmallestAvailableTable(
   return selectedIndex
 }
 
-function expandTables(config: SimulatorConfig): TableResource[] {
-  return config.tables.flatMap((table) =>
-    Array.from({ length: table.count }, () => ({ capacity: table.capacity, availableAt: 0 })),
+function expandSeatingResources(config: SimulatorConfig): SeatingResource[] {
+  return config.tables.flatMap((table): SeatingResource[] => {
+    if (table.kind === 'table') {
+      return Array.from({ length: table.count }, () => ({
+        kind: 'table' as const,
+        capacity: table.capacity,
+        availableAt: 0,
+      }))
+    }
+    if (table.kind === 'counter-single') {
+      return [
+        {
+          kind: 'counter-single',
+          capacity: table.count,
+          seatAvailableAt: Array.from({ length: table.count }, () => 0),
+        },
+      ]
+    }
+    return Array.from({ length: table.count }, () => ({
+      kind: 'counter-contiguous' as const,
+      capacity: table.capacity,
+      seatAvailableAt: Array.from({ length: table.capacity }, () => 0),
+    }))
+  })
+}
+
+function findContiguousSeats(
+  availableTimes: readonly number[],
+  partySize: number,
+  arrivalTime: number,
+): number[] | undefined {
+  for (let start = 0; start <= availableTimes.length - partySize; start += 1) {
+    const indexes = Array.from({ length: partySize }, (_, offset) => start + offset)
+    if (indexes.every((index) => (availableTimes[index] ?? Number.POSITIVE_INFINITY) <= arrivalTime)) {
+      return indexes
+    }
+  }
+  return undefined
+}
+
+function chooseSeatingAllocation(
+  resources: readonly SeatingResource[],
+  partySize: number,
+  arrivalTime: number,
+): SeatingAllocation | undefined {
+  const candidates: SeatingAllocation[] = []
+  resources.forEach((resource, resourceIndex) => {
+    if (resource.kind === 'table') {
+      if (resource.availableAt <= arrivalTime && resource.capacity >= partySize) {
+        candidates.push({
+          resource,
+          resourceIndex,
+          seatIndexes: [],
+          allocatedSeatCount: 1,
+          effectiveCapacity: resource.capacity,
+          waste: resource.capacity - partySize,
+        })
+      }
+      return
+    }
+    if (resource.kind === 'counter-single' && partySize !== 1) return
+    const seatIndexes = findContiguousSeats(resource.seatAvailableAt, partySize, arrivalTime)
+    if (seatIndexes) {
+      candidates.push({
+        resource,
+        resourceIndex,
+        seatIndexes,
+        allocatedSeatCount: partySize,
+        effectiveCapacity: partySize,
+        waste: 0,
+      })
+    }
+  })
+  candidates.sort(
+    (a, b) =>
+      a.waste - b.waste ||
+      a.effectiveCapacity - b.effectiveCapacity ||
+      a.resourceIndex - b.resourceIndex,
   )
+  return candidates[0]
+}
+
+function releaseAt(allocation: SeatingAllocation, time: number): void {
+  if (allocation.resource.kind === 'table') {
+    allocation.resource.availableAt = time
+    return
+  }
+  const counter = allocation.resource
+  allocation.seatIndexes.forEach((index) => {
+    counter.seatAvailableAt[index] = time
+  })
+}
+
+function maximumPartyCapacity(config: SimulatorConfig): number {
+  return Math.max(
+    ...config.tables.map((table) =>
+      table.kind === 'counter-single' ? 1 : table.capacity,
+    ),
+    0,
+  )
+}
+
+function totalSeatCount(config: SimulatorConfig): number {
+  return config.tables.reduce((sum, table) => {
+    if (table.kind === 'counter-single') return sum + table.count
+    return sum + table.capacity * table.count
+  }, 0)
+}
+
+function seatingResourceUnitCount(config: SimulatorConfig): number {
+  return config.tables.reduce((sum, table) => {
+    if (table.kind === 'table') return sum + table.count
+    if (table.kind === 'counter-single') return sum + table.count
+    return sum + table.capacity * table.count
+  }, 0)
 }
 
 function generateArrivals(
@@ -139,9 +269,9 @@ function simulateDayCore(
 ): CoreResult {
   const mode = options.mode ?? 'normal'
   const closing = timeToDayMinutes(config.business.lastOrderTime) - timeToDayMinutes(config.business.openTime)
-  const tables = expandTables(config)
+  const seatingResources = expandSeatingResources(config)
   const kitchenSlots = Array.from({ length: config.kitchen.slots }, () => 0)
-  const tableIntervals: Interval[] = []
+  const seatingIntervals: Interval[] = []
   const kitchenIntervals: Interval[] = []
   const queueIntervals: Interval[] = []
   const arrivals = options.arrivals
@@ -160,7 +290,7 @@ function simulateDayCore(
   let rejectedLastOrderGroups = 0
   let rejectedLastOrderPeople = 0
   let latestRelease = closing
-  const maxCapacity = Math.max(...tables.map((table) => table.capacity), 0)
+  const maxCapacity = maximumPartyCapacity(config)
 
   for (const arrival of arrivals) {
     const trace: GroupTrace = { arrivalTime: arrival.time, partySize: arrival.partySize, outcome: 'full' }
@@ -172,17 +302,19 @@ function simulateDayCore(
       continue
     }
 
-    const tableIndex = chooseSmallestAvailableTable(tables, arrival.partySize, arrival.time)
-    if (tableIndex < 0) {
+    const allocation = chooseSeatingAllocation(seatingResources, arrival.partySize, arrival.time)
+    if (!allocation) {
       rejectedFullGroups += 1
       rejectedFullPeople += arrival.partySize
       trace.outcome = 'full'
       if (includeTraces) traces.push(trace)
       continue
     }
-    const table = tables[tableIndex]
-    if (!table) continue
-    trace.tableCapacity = table.capacity
+    trace.seatingKind = allocation.resource.kind
+    trace.tableCapacity =
+      allocation.resource.kind === 'counter-single' ? 1 : allocation.resource.capacity
+    trace.allocatedSeatCount =
+      allocation.resource.kind === 'table' ? allocation.resource.capacity : arrival.partySize
     const orderTime = arrival.time + config.business.orderMinutes
     trace.orderTime = orderTime
     if (orderTime > closing) {
@@ -190,8 +322,13 @@ function simulateDayCore(
       rejectedLastOrderPeople += arrival.partySize
       trace.outcome = 'lastOrder'
       trace.releaseTime = orderTime
-      table.availableAt = orderTime
-      tableIntervals.push({ start: arrival.time, end: orderTime, people: arrival.partySize })
+      releaseAt(allocation, orderTime)
+      seatingIntervals.push({
+        start: arrival.time,
+        end: orderTime,
+        people: arrival.partySize,
+        resourceUnits: allocation.allocatedSeatCount,
+      })
       latestRelease = Math.max(latestRelease, orderTime)
       if (includeTraces) traces.push(trace)
       continue
@@ -247,8 +384,13 @@ function simulateDayCore(
     })
     const releaseTime =
       Math.max(...mealFinishTimes) + config.business.checkoutMinutes + config.business.cleanupMinutes
-    table.availableAt = releaseTime
-    tableIntervals.push({ start: arrival.time, end: releaseTime, people: arrival.partySize })
+    releaseAt(allocation, releaseTime)
+    seatingIntervals.push({
+      start: arrival.time,
+      end: releaseTime,
+      people: arrival.partySize,
+      resourceUnits: allocation.allocatedSeatCount,
+    })
     stays.push(releaseTime - arrival.time)
     latestRelease = Math.max(latestRelease, releaseTime)
     Object.assign(trace, { serviceTimes, mealStartTimes, mealFinishTimes, releaseTime })
@@ -256,14 +398,17 @@ function simulateDayCore(
   }
 
   const rejectedPeople = rejectedFullPeople + rejectedOversizePeople + rejectedLastOrderPeople
-  const tableBusy = tableIntervals.reduce((sum, interval) => sum + clippedDuration(interval, closing), 0)
-  const occupiedSeats = tableIntervals.reduce(
+  const seatingResourceBusy = seatingIntervals.reduce(
+    (sum, interval) => sum + clippedDuration(interval, closing) * (interval.resourceUnits ?? 1),
+    0,
+  )
+  const occupiedSeats = seatingIntervals.reduce(
     (sum, interval) => sum + clippedDuration(interval, closing) * (interval.people ?? 0),
     0,
   )
   const kitchenBusy = kitchenIntervals.reduce((sum, interval) => sum + clippedDuration(interval, closing), 0)
-  const totalSeats = tables.reduce((sum, table) => sum + table.capacity, 0)
-  const tableDenominator = tables.length * closing
+  const totalSeats = totalSeatCount(config)
+  const tableDenominator = seatingResourceUnitCount(config) * closing
   const seatDenominator = totalSeats * closing
   const kitchenDenominator = kitchenSlots.length * closing
 
@@ -285,7 +430,9 @@ function simulateDayCore(
       maxServiceWait: serviceWaits.length ? Math.max(...serviceWaits) : 0,
       averageStay: mean(stays),
       maxStay: stays.length ? Math.max(...stays) : 0,
-      tableUtilization: clampRate(tableDenominator > 0 ? tableBusy / tableDenominator : 0),
+      tableUtilization: clampRate(
+        tableDenominator > 0 ? seatingResourceBusy / tableDenominator : 0,
+      ),
       seatUtilization: clampRate(seatDenominator > 0 ? occupiedSeats / seatDenominator : 0),
       kitchenUtilization: clampRate(kitchenDenominator > 0 ? kitchenBusy / kitchenDenominator : 0),
       overtimeMinutes: Math.max(0, latestRelease - closing),

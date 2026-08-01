@@ -64,7 +64,7 @@ export function ResultsDashboard({ result, onDownloadCsv }: Props) {
         <Metric label="平均受け入れ組数" value={`${number(average((day) => day.acceptedGroups))}組`} />
         <Metric label="平均離脱人数" value={`${number(summary.averageRejectedPeople)}人`} />
         <Metric label="満席離脱" value={`${number(summary.averageRejectedFullGroups)}組`} />
-        <Metric label="最大卓定員超過" value={`${number(summary.averageRejectedOversizeGroups)}組`} />
+        <Metric label="最大収容人数超過" value={`${number(summary.averageRejectedOversizeGroups)}組`} />
         <Metric label="LO超過" value={`${number(summary.averageRejectedLastOrderGroups)}組`} />
         <Metric label="飽和時の受入人数" value={`${number(result.saturatedAveragePeople)}人`} />
       </dl>
@@ -75,7 +75,7 @@ export function ResultsDashboard({ result, onDownloadCsv }: Props) {
         <Metric label="平均最大提供待ち" value={minutes(average((day) => day.maxServiceWait))} />
         <Metric label="平均滞在時間" value={minutes(summary.averageStay)} />
         <Metric label="平均最大滞在時間" value={minutes(average((day) => day.maxStay))} />
-        <Metric label="客席（卓）稼働率" value={percent(summary.averageTableUtilization)} />
+        <Metric label="客席リソース稼働率" value={percent(summary.averageTableUtilization)} />
         <Metric label="実席稼働率" value={percent(summary.averageSeatUtilization)} />
         <Metric label="厨房稼働率" value={percent(summary.averageKitchenUtilization)} />
         <Metric label="営業終了後処理" value={minutes(summary.averageOvertime)} />

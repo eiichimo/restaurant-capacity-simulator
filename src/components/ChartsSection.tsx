@@ -79,13 +79,13 @@ export function ChartsSection({ result }: Props) {
         </figure>
         <figure className="chart-card">
           <figcaption><h3>離脱理由別</h3><p>1営業日あたりの平均離脱組数</p></figcaption>
-          <div className="chart-canvas"><Bar aria-label="離脱理由別の平均組数" role="img" options={commonOptions} data={{ labels: ['満席', '最大卓定員超過', 'LO超過'], datasets: [{ label: '組', data: rejectedBars, backgroundColor: ['#c86452', '#b78b63', '#8a6b83'] }] }} /></div>
-          <p className="chart-text">満席 {rejectedBars[0]?.toFixed(1)}組 ／ 最大卓定員超過 {rejectedBars[1]?.toFixed(1)}組 ／ LO超過 {rejectedBars[2]?.toFixed(1)}組</p>
+          <div className="chart-canvas"><Bar aria-label="離脱理由別の平均組数" role="img" options={commonOptions} data={{ labels: ['満席', '最大収容人数超過', 'LO超過'], datasets: [{ label: '組', data: rejectedBars, backgroundColor: ['#c86452', '#b78b63', '#8a6b83'] }] }} /></div>
+          <p className="chart-text">満席 {rejectedBars[0]?.toFixed(1)}組 ／ 最大収容人数超過 {rejectedBars[1]?.toFixed(1)}組 ／ LO超過 {rejectedBars[2]?.toFixed(1)}組</p>
         </figure>
         <figure className="chart-card">
-          <figcaption><h3>稼働率の比較</h3><p>卓・実席・厨房の平均稼働率</p></figcaption>
-          <div className="chart-canvas"><Bar aria-label="客席稼働率、実席稼働率、厨房稼働率の比較" role="img" options={{ ...commonOptions, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: (value) => `${value}%` } } } }} data={{ labels: ['客席（卓）', '実席', '厨房'], datasets: [{ label: '%', data: utilizationBars, backgroundColor: ['#2f6d5c', '#77a493', '#e89a52'] }] }} /></div>
-          <p className="chart-text">客席（卓） {utilizationBars[0]?.toFixed(1)}% ／ 実席 {utilizationBars[1]?.toFixed(1)}% ／ 厨房 {utilizationBars[2]?.toFixed(1)}%</p>
+          <figcaption><h3>稼働率の比較</h3><p>客席リソース・実席・厨房の平均稼働率</p></figcaption>
+          <div className="chart-canvas"><Bar aria-label="客席リソース稼働率、実席稼働率、厨房稼働率の比較" role="img" options={{ ...commonOptions, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: (value) => `${value}%` } } } }} data={{ labels: ['客席リソース', '実席', '厨房'], datasets: [{ label: '%', data: utilizationBars, backgroundColor: ['#2f6d5c', '#77a493', '#e89a52'] }] }} /></div>
+          <p className="chart-text">客席リソース {utilizationBars[0]?.toFixed(1)}% ／ 実席 {utilizationBars[1]?.toFixed(1)}% ／ 厨房 {utilizationBars[2]?.toFixed(1)}%</p>
         </figure>
       </div>
     </section>

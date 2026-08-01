@@ -19,7 +19,7 @@ function testConfig(): SimulatorConfig {
     checkoutMinutes: 0,
     cleanupMinutes: 0,
   }
-  config.tables = [{ id: 'only', name: '2人卓', capacity: 2, count: 1 }]
+  config.tables = [{ id: 'only', name: '2人卓', kind: 'table', capacity: 2, count: 1 }]
   config.arrivalPeriods = [{ id: 'all', startTime: '10:00', endTime: '11:00', groupsPerHour: 4 }]
   config.partySizeWeights = [0, 100, 0, 0, 0, 0]
   config.kitchen = {
@@ -133,6 +133,93 @@ describe('卓の割り当てと離脱', () => {
   })
 })
 
+describe('カウンター席の割り当て', () => {
+  it('1人専用カウンターは空席が複数あっても2人グループを案内しない', () => {
+    const config = testConfig()
+    config.tables = [
+      { id: 'single-counter', name: '1人専用', kind: 'counter-single', capacity: 1, count: 4 },
+    ]
+    const { day, traces } = simulateDayDetailed(config, mulberry32(1), {
+      arrivals: [{ time: 0, partySize: 2 }],
+    })
+    expect(day.rejectedOversizeGroups).toBe(1)
+    expect(traces[0]?.outcome).toBe('oversize')
+  })
+
+  it('連続カウンターは隣接空席へグループを案内する', () => {
+    const config = testConfig()
+    config.tables = [
+      { id: 'flex-counter', name: '連続カウンター', kind: 'counter-contiguous', capacity: 4, count: 1 },
+    ]
+    const { day, traces } = simulateDayDetailed(config, mulberry32(1), {
+      arrivals: [{ time: 0, partySize: 3 }],
+    })
+    expect(day.acceptedPeople).toBe(3)
+    expect(traces[0]).toMatchObject({
+      outcome: 'accepted',
+      seatingKind: 'counter-contiguous',
+      tableCapacity: 4,
+      allocatedSeatCount: 3,
+    })
+  })
+
+  it('空席数が足りても同じ列内で連続していなければ案内しない', () => {
+    const config = testConfig()
+    config.tables = [
+      { id: 'flex-counter', name: '連続カウンター', kind: 'counter-contiguous', capacity: 4, count: 1 },
+    ]
+    config.kitchen = {
+      slots: 4,
+      cookMeanMinutes: 0,
+      cookVariationMinutes: 0,
+      diningMeanMinutes: 50,
+      diningVariationMinutes: 50,
+      waitForAllMeals: false,
+    }
+    const values = [
+      0.5, 0.5, 0.999,
+      0.5, 0.5, 0.1,
+      0.5, 0.5, 0.999,
+      0.5, 0.5, 0.1,
+    ]
+    const random = { next: () => values.shift() ?? 0.5 }
+    const { traces } = simulateDayDetailed(config, random, {
+      arrivals: [
+        { time: 0, partySize: 1 },
+        { time: 0, partySize: 1 },
+        { time: 0, partySize: 1 },
+        { time: 0, partySize: 1 },
+        { time: 20, partySize: 2 },
+      ],
+    })
+    expect(traces.slice(0, 4).every((trace) => trace.outcome === 'accepted')).toBe(true)
+    expect(traces[4]?.outcome).toBe('full')
+  })
+
+  it('別のカウンター列をまたいでグループを案内しない', () => {
+    const config = testConfig()
+    config.tables = [
+      { id: 'two-rows', name: '2席カウンター', kind: 'counter-contiguous', capacity: 2, count: 2 },
+    ]
+    const { day } = simulateDayDetailed(config, mulberry32(1), {
+      arrivals: [{ time: 0, partySize: 3 }],
+    })
+    expect(day.rejectedOversizeGroups).toBe(1)
+  })
+
+  it('カウンターは使用した席スロット数で客席リソース稼働率を計算する', () => {
+    const config = testConfig()
+    config.tables = [
+      { id: 'flex-counter', name: '連続カウンター', kind: 'counter-contiguous', capacity: 4, count: 1 },
+    ]
+    const day = simulateDay(config, mulberry32(1), {
+      arrivals: [{ time: 0, partySize: 2 }],
+    })
+    expect(day.tableUtilization).toBeCloseTo((2 * 25) / (4 * 60))
+    expect(day.seatUtilization).toBeCloseTo((2 * 25) / (4 * 60))
+  })
+})
+
 describe('厨房と卓解放時刻', () => {
   it('厨房スロット数によって提供時刻が変わる', () => {
     const oneSlot = testConfig()
@@ -201,7 +288,7 @@ describe('安全な集計と飽和需要', () => {
 
   it('固定条件の各集計値を定義どおりに計算する', () => {
     const config = testConfig()
-    config.tables = [{ id: 'four', name: '4人卓', capacity: 4, count: 1 }]
+    config.tables = [{ id: 'four', name: '4人卓', kind: 'table', capacity: 4, count: 1 }]
     const day = simulateDay(config, mulberry32(1), {
       arrivals: [{ time: 0, partySize: 2 }],
     })
