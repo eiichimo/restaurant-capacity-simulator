@@ -6,6 +6,7 @@ import { BusinessForm } from './components/BusinessForm'
 import { ChartsSection } from './components/ChartsSection'
 import { FormField } from './components/FormField'
 import { KitchenPricingForm } from './components/KitchenPricingForm'
+import { OperationalAdvicePanel } from './components/OperationalAdvicePanel'
 import { ResultsDashboard } from './components/ResultsDashboard'
 import { TablesForm } from './components/TablesForm'
 import { clonePreset, DEFAULT_CONFIG, PRESETS } from './presets'
@@ -190,7 +191,7 @@ export default function App() {
           </section>
         </form>
 
-        {result && <><ResultsDashboard result={result} onDownloadCsv={() => downloadResultsCsv(result)} /><ChartsSection result={result} /><BottleneckPanel result={result} /></>}
+        {result && <><ResultsDashboard result={result} onDownloadCsv={() => downloadResultsCsv(result)} /><ChartsSection result={result} /><BottleneckPanel result={result} /><OperationalAdvicePanel config={config} result={result} /></>}
         <Assumptions />
       </main>
       <footer><p>飲食店 売上キャパシティ・シミュレーター — 入力データと計算結果は端末の外へ送信されません。</p></footer>
