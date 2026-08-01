@@ -54,6 +54,9 @@ main { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
 .field > label { display: block; margin-bottom: .5rem; color: #32463f; font-size: .84rem; font-weight: 700; }
 .field small, .check-field small { display: block; margin-top: .4rem; color: var(--ink-muted); font-size: .74rem; }
 .input-with-unit { position: relative; display: flex; align-items: center; }
+.field-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.field-controls .input-with-unit, .field-controls input { min-width: 0; }
+.option-select { width: auto; min-width: 92px; padding-right: .45rem; font-size: .78rem; color: var(--green-800); background: #f5f8f6; }
 input:not([type='checkbox']), select { width: 100%; min-height: 46px; padding: .72rem .85rem; border: 1px solid #bfc7c3; border-radius: 8px; color: #162b24; background: white; transition: border .15s, box-shadow .15s; }
 input:not([type='checkbox']):focus, select:focus { border-color: var(--green-700); box-shadow: 0 0 0 3px rgba(47,109,92,.12); }
 .input-with-unit input { padding-right: 4.3rem; }
@@ -76,6 +79,8 @@ input:not([type='checkbox']):focus, select:focus { border-color: var(--green-700
 .badge { padding: .3rem .65rem; border-radius: 99px; color: var(--green-800); background: var(--green-100); font-size: .75rem; font-weight: 700; }
 .error-badge { color: var(--red); background: #f8deda; }
 .weights-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+.weights-grid .field-controls { grid-template-columns: 1fr; }
+.weights-grid .option-select { width: 100%; }
 .check-field { display: flex; gap: .8rem; align-items: flex-start; max-width: 620px; margin-top: 26px; padding: 16px; border-radius: 10px; background: #eef5f1; cursor: pointer; }
 .check-field input { flex: 0 0 auto; width: 20px; height: 20px; margin-top: 2px; accent-color: var(--green-700); }
 .check-field strong { display: block; font-size: .9rem; }

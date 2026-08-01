@@ -1,5 +1,6 @@
 import type { SimulatorConfig, TableType } from '../simulation/types'
 import { FormField } from './FormField'
+import { NUMBER_OPTIONS } from './numberOptions'
 
 interface Props {
   config: SimulatorConfig
@@ -29,8 +30,8 @@ export function TablesForm({ config, onChange }: Props) {
         {config.tables.map((table, index) => (
           <div className="repeat-row table-row" key={table.id}>
             <FormField id={`table-name-${table.id}`} label={`種別 ${index + 1}・名称`} value={table.name} onChange={(event) => update(index, 'name', event.target.value)} />
-            <FormField id={`table-capacity-${table.id}`} label="1卓あたり定員" unit="人" type="number" min="1" step="1" value={table.capacity} onChange={(event) => update(index, 'capacity', Number(event.target.value))} />
-            <FormField id={`table-count-${table.id}`} label="卓数" unit="卓" type="number" min="1" step="1" value={table.count} onChange={(event) => update(index, 'count', Number(event.target.value))} />
+            <FormField id={`table-capacity-${table.id}`} label="1卓あたり定員" unit="人" type="number" min="1" step="1" value={table.capacity} options={NUMBER_OPTIONS.capacity} onChange={(event) => update(index, 'capacity', Number(event.target.value))} onOptionSelect={(value) => update(index, 'capacity', value)} />
+            <FormField id={`table-count-${table.id}`} label="卓数" unit="卓" type="number" min="1" step="1" value={table.count} options={NUMBER_OPTIONS.tableCount} onChange={(event) => update(index, 'count', Number(event.target.value))} onOptionSelect={(value) => update(index, 'count', value)} />
             <button className="button danger ghost row-action" type="button" onClick={() => onChange(config.tables.filter((_, tableIndex) => tableIndex !== index))} aria-label={`${table.name}を削除`}>削除</button>
           </div>
         ))}

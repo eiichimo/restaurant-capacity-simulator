@@ -1,5 +1,6 @@
 import type { ArrivalPeriod, SimulatorConfig } from '../simulation/types'
 import { FormField } from './FormField'
+import { NUMBER_OPTIONS } from './numberOptions'
 
 interface Props {
   config: SimulatorConfig
@@ -34,7 +35,7 @@ export function ArrivalsForm({ config, onPeriodsChange, onWeightsChange }: Props
           <div className="repeat-row period-row" key={period.id}>
             <FormField id={`period-start-${period.id}`} label={`時間帯 ${index + 1}・開始`} type="time" value={period.startTime} onChange={(event) => updatePeriod(index, 'startTime', event.target.value)} />
             <FormField id={`period-end-${period.id}`} label="終了" type="time" value={period.endTime} onChange={(event) => updatePeriod(index, 'endTime', event.target.value)} />
-            <FormField id={`period-rate-${period.id}`} label="平均来店組数" unit="組／時" type="number" min="0" step="0.1" value={period.groupsPerHour} onChange={(event) => updatePeriod(index, 'groupsPerHour', Number(event.target.value))} />
+            <FormField id={`period-rate-${period.id}`} label="平均来店組数" unit="組／時" type="number" min="0" step="0.1" value={period.groupsPerHour} options={NUMBER_OPTIONS.groupsPerHour} onChange={(event) => updatePeriod(index, 'groupsPerHour', Number(event.target.value))} onOptionSelect={(value) => updatePeriod(index, 'groupsPerHour', value)} />
             <button className="button danger ghost row-action" type="button" onClick={() => onPeriodsChange(config.arrivalPeriods.filter((_, periodIndex) => periodIndex !== index))} aria-label={`時間帯${index + 1}を削除`}>削除</button>
           </div>
         ))}
@@ -47,7 +48,7 @@ export function ArrivalsForm({ config, onPeriodsChange, onWeightsChange }: Props
       <p className="hint">合計が100%でなくても計算時に自動で正規化します。</p>
       <div className="weights-grid">
         {config.partySizeWeights.map((weight, index) => (
-          <FormField key={index} id={`party-weight-${index + 1}`} label={`${index + 1}人`} unit="%" type="number" min="0" step="1" value={weight} onChange={(event) => updateWeight(index, Number(event.target.value))} />
+          <FormField key={index} id={`party-weight-${index + 1}`} label={`${index + 1}人`} unit="%" type="number" min="0" step="1" value={weight} options={NUMBER_OPTIONS.percentage} onChange={(event) => updateWeight(index, Number(event.target.value))} onOptionSelect={(value) => updateWeight(index, value)} />
         ))}
       </div>
     </section>
