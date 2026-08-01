@@ -11,6 +11,7 @@ import { TablesForm } from './components/TablesForm'
 import { clonePreset, DEFAULT_CONFIG, PRESETS } from './presets'
 import type { AnalysisResult, SimulatorConfig, TrialCount } from './simulation/types'
 import { parseConfigJson, validateConfig } from './simulation/validation'
+import { applyBusinessSettings } from './utils/config'
 import { downloadConfig, downloadResultsCsv } from './utils/export'
 
 const STORAGE_KEY = 'restaurant-capacity-simulator:settings:v1'
@@ -157,7 +158,10 @@ export default function App() {
         </section>
 
         <form onSubmit={runSimulation} noValidate>
-          <BusinessForm config={config} onChange={(business) => patchConfig('business', business)} />
+          <BusinessForm
+            config={config}
+            onChange={(business) => replaceConfig(applyBusinessSettings(config, business))}
+          />
           <TablesForm config={config} onChange={(tables) => patchConfig('tables', tables)} />
           <ArrivalsForm config={config} onPeriodsChange={(arrivalPeriods) => patchConfig('arrivalPeriods', arrivalPeriods)} onWeightsChange={(partySizeWeights) => patchConfig('partySizeWeights', partySizeWeights)} />
           <KitchenPricingForm config={config} onKitchenChange={(kitchen) => patchConfig('kitchen', kitchen)} onPricingChange={(pricing) => patchConfig('pricing', pricing)} />
