@@ -106,6 +106,31 @@ describe('卓の割り当てと離脱', () => {
     expect(day.rejectedLastOrderGroups).toBe(1)
     expect(traces[0]?.outcome).toBe('lastOrder')
   })
+
+  it('注文確定がラストオーダーと同時刻なら受け付ける', () => {
+    const config = testConfig()
+    config.business.orderMinutes = 5
+    const { day, traces } = simulateDayDetailed(config, mulberry32(1), {
+      arrivals: [{ time: 55, partySize: 2 }],
+    })
+    expect(day.acceptedGroups).toBe(1)
+    expect(day.rejectedLastOrderGroups).toBe(0)
+    expect(traces[0]?.outcome).toBe('accepted')
+  })
+
+  it('卓が解放された時刻と同時刻の来店を受け付ける', () => {
+    const config = testConfig()
+    config.partySizeWeights = [100, 0, 0, 0, 0, 0]
+    const { day, traces } = simulateDayDetailed(config, mulberry32(1), {
+      arrivals: [
+        { time: 0, partySize: 1 },
+        { time: 14, partySize: 1 },
+        { time: 15, partySize: 1 },
+      ],
+    })
+    expect(traces.map((trace) => trace.outcome)).toEqual(['accepted', 'full', 'accepted'])
+    expect(day.acceptedGroups).toBe(2)
+  })
 })
 
 describe('厨房と卓解放時刻', () => {
@@ -172,5 +197,86 @@ describe('安全な集計と飽和需要', () => {
     const highResult = runAnalysis(highDemand)
     expect(highResult.saturatedDays).toEqual(lowResult.saturatedDays)
     expect(highResult.normalDays).not.toEqual(lowResult.normalDays)
+  })
+
+  it('固定条件の各集計値を定義どおりに計算する', () => {
+    const config = testConfig()
+    config.tables = [{ id: 'four', name: '4人卓', capacity: 4, count: 1 }]
+    const day = simulateDay(config, mulberry32(1), {
+      arrivals: [{ time: 0, partySize: 2 }],
+    })
+
+    expect(day).toMatchObject({
+      revenue: 2000,
+      arrivedGroups: 1,
+      arrivedPeople: 2,
+      acceptedGroups: 1,
+      acceptedPeople: 2,
+      rejectedFullGroups: 0,
+      rejectedOversizeGroups: 0,
+      rejectedLastOrderGroups: 0,
+      lostRevenue: 0,
+      averageServiceWait: 15,
+      maxServiceWait: 20,
+      averageStay: 25,
+      maxStay: 25,
+      overtimeMinutes: 0,
+      maxKitchenQueue: 1,
+    })
+    expect(day.tableUtilization).toBeCloseTo(25 / 60)
+    expect(day.seatUtilization).toBeCloseTo((2 * 25) / (4 * 60))
+    expect(day.kitchenUtilization).toBeCloseTo(20 / 60)
+  })
+
+  it('LO超過離脱の占有、機会損失、終了後処理を集計する', () => {
+    const config = testConfig()
+    config.business.orderMinutes = 10
+    const day = simulateDay(config, mulberry32(1), {
+      arrivals: [{ time: 55, partySize: 2 }],
+    })
+
+    expect(day.revenue).toBe(0)
+    expect(day.lostRevenue).toBe(2000)
+    expect(day.rejectedLastOrderPeople).toBe(2)
+    expect(day.tableUtilization).toBeCloseTo(5 / 60)
+    expect(day.seatUtilization).toBeCloseTo(10 / 120)
+    expect(day.kitchenUtilization).toBe(0)
+    expect(day.overtimeMinutes).toBe(5)
+  })
+
+  it('ラストオーダー後の卓・厨房占有を稼働率へ含めない', () => {
+    const config = testConfig()
+    config.partySizeWeights = [100, 0, 0, 0, 0, 0]
+    const day = simulateDay(config, mulberry32(1), {
+      arrivals: [{ time: 50, partySize: 1 }],
+    })
+
+    // 50分から卓解放65分までのうち、LOまでの10分だけを稼働率へ含める。
+    expect(day.tableUtilization).toBeCloseTo(10 / 60)
+    expect(day.seatUtilization).toBeCloseTo(10 / 120)
+    expect(day.kitchenUtilization).toBeCloseTo(10 / 60)
+    expect(day.overtimeMinutes).toBe(5)
+  })
+
+  it('飽和需要では時間と客単価の変動幅を使用しない', () => {
+    const config = testConfig()
+    config.kitchen.cookVariationMinutes = 100
+    config.kitchen.diningVariationMinutes = 100
+    config.pricing.variation = 10000
+    const { day, traces } = simulateDayDetailed(config, mulberry32(999), {
+      mode: 'saturated',
+      arrivals: [{ time: 0, partySize: 2 }],
+    })
+
+    expect(day.revenue).toBe(2000)
+    expect(traces[0]?.serviceTimes).toEqual([10, 20])
+    expect(traces[0]?.mealFinishTimes).toEqual([15, 25])
+  })
+
+  it('進捗を単調増加で通知し最後に100%を通知する', () => {
+    const progress: number[] = []
+    runAnalysis(testConfig(), (percentage) => progress.push(percentage))
+    expect(progress.at(-1)).toBe(100)
+    expect(progress.every((value, index) => index === 0 || value >= (progress[index - 1] ?? 0))).toBe(true)
   })
 })
